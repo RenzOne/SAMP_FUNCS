@@ -1,4 +1,4 @@
-﻿; #### SAMP UDF R18 ####
+; #### SAMP UDF R18 ####
 ; SAMP Version: 0.3.7, 0.3.7-R2, 0.3.DL
 ; Written by Chuck_Floyd 
 ; https://github.com/FrozenBrain
@@ -1340,12 +1340,12 @@ GetTargetPed() {
 	return dwAddress
 }
 
-CalcScreenCoords(Coords, ScreenRange:=50, Boolean:=False) {
+CalcScreenCoords(Coords, ScreenRange:=50) {
 	if(!checkHandles() || !isObject(Coords))
 		return false
 	
 	dwM := 0xB6FA2C
-	POS_OFFSET := -180
+	POS_OFFSET := 180
 	
 	m_11 := readFloat(hGTA, dwM + 0*4)
 	if(ErrorLevel) {
@@ -1379,19 +1379,8 @@ CalcScreenCoords(Coords, ScreenRange:=50, Boolean:=False) {
 	fRecip := 1.0/frZ
 	frX *= fRecip * dwLenX
 	frY *= fRecip * dwLenY
-    ;if(frX<=dwLenX && frY<=dwLenY && frZ>1){
-	if(frX >= (((dwLenX/2)-ScreenRange)+POS_OFFSET) && frX <= (((dwLenX/2)+ScreenRange)+POS_OFFSET)){
-		return Boolean ? true : [frX,frY,frZ]
-	}
-}
-
-
-
-areCordsOnScreen(X, Y){
-	if(X > 700 && X < 800 && Y > 500 && Y < 600){
-		return true
-	} else {
-		return false
+	if(frX >= (((dwLenX//2)-ScreenRange)+(VAR_RADIANT*POS_OFFSET)) && frX <= (((dwLenX//2)+ScreenRange)+(VAR_RADIANT*POS_OFFSET))){
+		return [frX,frY,frZ]
 	}
 }
 
