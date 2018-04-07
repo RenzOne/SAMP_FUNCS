@@ -13,14 +13,14 @@ return
 if !DEBUG_MODE
 	AUTO_WALK_MODE := !AUTO_WALK_MODE
 else
-	addChatmessage("{" Color.Main "}Auto-Walk State: {" Color.Main "}" (AUTO_WALK_MODE := !AUTO_WALK_MODE))	
+	DebugMes("{" Color.Main "}Auto-Walk State: {" Color.Value "}" ((AUTO_WALK_MODE := !AUTO_WALK_MODE)?("Turned On"):("Turned Off")))	
 return
 
 ~2::
 DisableCheckpoint()
 _RandomCheckpoint()
-SearchCP(5.0)
-
+SearchCP(GetPlayerCoordinates(),5.0)
+	
 return
 
 ~3::
@@ -32,77 +32,68 @@ Dist(_p1,_p2){
 	return Sqrt((_p1[1]-_p2[1])*(_p1[1]-_p2[1])+(_p1[2]-_p2[2])*(_p1[2]-_p2[2])+(_p1[3]-_p2[3])*(_p1[3]-_p2[3]))
 }
 
-SearchCP(Range)
+SearchCP(pPos,Range)
 {
+	if(!isObject(pPos) || !Range)
+		return 0
 	While(A_Index <= 360)
 	{
-		if isObject(CalcScreenCoords(_Marker:=CoordsFromRedmarker(),50))
-		{
-			for	_i, m in _Marker
-			{
-				if !m 
-				{
-					FOUND_CP := False
-					break					
-				}
-			}
-			
-			_Player := GetPlayerCoordinates()
-			if DEBUG_MODE
-			{
-				addChatmessage("{" Color.Main "}Checkpooint - {" Color.Value "}Focused!")
-				addChatmessage("{" Color.Main "}Checkpoint Position! {" Color.Value "}" _Marker[1] "{" Color.Main "} - {" Color.Value "}"  _Marker[2] "{" Color.Main "} - {" Color.Value "}"  _Marker[3])
-				addChatmessage("{" Color.Main "}Player Position! {" Color.Value "}" _Player[1] "{" Color.Main "} - {" Color.Value "}"  _Player[2] "{" Color.Main "} - {" Color.Value "}"  _Player[3])
-				addChatmessage("{" Color.Main "}Player Distance to Marker {" Color.Value "}" Round(odist:=Dist(_Player,_Marker)) "{" Color.Main "}m")
-				addChatmessage("{" Color.Main "}Playerstate: {" Color.Value "}Auto-Walk Online!")
-			}
-			FOUND_CP := True
+		if !AUTO_WALK_MODE 
 			break
+			
+		for	_i, m in _Marker
+		{
+			if !m 
+			{
+				FOUND_CP := False
+				break					
+			}
 		}
+		if FOUND_CP := isObject(CalcScreenCoords(_Marker:=CoordsFromRedmarker(),50))
+			break
 		else
 			SetCameraAngleX(A_Index)
-		
-		AUTO_WALK_MODE ? "" : break
 	}
-	return FOUND_CP ? MoveToCP(Range,_Player,_Marker) : -1
+	return FOUND_CP ? MoveToCP(Range,pPos,_Marker) : -1
 }
 return
 
 MoveToCP(Range,PlayerPos,MarkerPos)
 {
-	if !IsMarkerCreated() || !AUTO_WALK_MODE || !isObject(PlayerPos) || !isObject(MarkerPos) || !Old_Dist || !Range
+	if !IsMarkerCreated() || !AUTO_WALK_MODE || !isObject(PlayerPos) || !isObject(MarkerPos) || !Range
 		return 0
 
 	Send {w Down}
 
-	oDist:=Dist(PlayerPos,MarkerPos)
+	_oldDist:=Dist(PlayerPos,MarkerPos)
 	CP_REACHED := False
 
 	Loop
 	{
+		if !AUTO_WALK_MODE 
+			break
+
+		_oldDist:=Dist(PlayerPos:=GetPlayerCoordinates(),MarkerPos:=CoordsFromRedmarker())
+		
 		if GetKeyState("x" ,"P"){
 			Send {w}
-			addChatmessage("Loop interrupted by userinput")
+			DebugMes("{" Color.Main "}Loop interrupted reason: {" Color.Value "}Userinput pushed panic button!")
 			break
 		}
 		
-		if InRangeOf2D(MarkerPos,Range)
-		{
-			if DEBUG_MODE
-				addChatmessage("{" Color.Main "}Checkpoint reached! {" Color.Value "}Auto-Walk Offline!")	
+		if CP_REACHED := InRangeOf2D(MarkerPos,Range){
+			DebugMes("{" Color.Main "}Checkpoint reached! {" Color.Value "}Auto-Walk Offline!")	
 			Send {w}
-			CP_REACHED := True
 			break
 		}
 		
-		if(oDist < ndist)
-			break 
-		else
-			oDist:=Dist(PlayerPos,MarkerPos)
-		
-		AUTO_WALK_MODE ? "" : break
+		if(_oldDist>_newdist:=Dist(PlayerPos,MarkerPos)){
+			DebugMes("{" Color.Main "}Loop interrupted reason: {" Color.Value "}Distance to marker get bigger! (Has to get smaller!)")
+			Send {w}
+			break
+		}
 	}
-	return !!CP_REACHED
+	return !!(CP_REACHED)
 }
 
 _RandomCheckpoint()
@@ -117,4 +108,9 @@ _RandomCheckpoint()
 RandEx(Min,Max){
 	Random, rand, % Min, % Max
 	return rand
+}
+
+DebugMes(Mes)
+{
+	return DEBUG_MODE ? addChatmessage(Mes) : 0
 }
